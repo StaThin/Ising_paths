@@ -1,5 +1,6 @@
-library(ggm)
-library(igraph)
+# Functions needed to implement the methods of the paper
+# "Path-dependent parametric decompositions in Ising models"
+
 `ising` <- function(A, b) {
     v <- ncol(A)
     X <- data.matrix(expand.grid(rep(list(c(0, 1)), v)))
