@@ -180,7 +180,7 @@ measures2 <- function(p_dd) {
 }
 # ..................................
 
-# Two functions for computation of (Yd, Xa, Xb)
+# Two equivalente computations of (Yd, Xa, Xb)
 ydelta <- function(pa, V) {
     v <- length(V)
     if (v < 3) stop("The number of nodes is less then 3.")
