@@ -1,6 +1,5 @@
-# Functions needed to implement the methods of the paper
-# "Path-dependent parametric decompositions in Ising models"
-
+library(ggm)
+library(igraph)
 `ising` <- function(A, b) {
     v <- ncol(A)
     X <- data.matrix(expand.grid(rep(list(c(0, 1)), v)))
@@ -29,17 +28,26 @@
 }
 
 `path_prod_or` <- function(pall, A) {
+    w1 <- rep(0, length(pall))
+    w0 <- rep(0, length(pall))
+
     for (h in seq_along(pall)) {
+        prodall <- prod(exp(A)[upper.tri(A)])
         pa <- pall[[h]]
         siz <- length(pa)
         ed <- c()
         for (i in 2:siz) {
             ed <- c(ed, exp(A[pa[i - 1], pa[i]]))
         }
+        rst <- prodall / prod(ed)
+        w0[h] <- rst
+        w1[h] <- prod(ed)
         cat("Path: ", paste(pa, collapse = ","), "\n")
-        cat(round(ed, 2), "omega: ", round(prod(ed), 2), "\n")
+        cat(round(ed, 2), "omega: ", round(prod(ed), 2), "not-omega: ", round(rst, 2), "\n")
     }
+    invisible(cbind(w0, w1))
 }
+
 
 `trivariate` <- function(pa, V, p) {
     v <- length(V)
@@ -49,7 +57,7 @@
     b <- pa[length(pa)]
     delta <- setdiff(pa, c(a, b))
     rest <- setdiff(V, c(a, delta, b))
-    Yd <- 0 + (apply(X[, delta] == 1, 1, all) & apply(X[, rest] == 0, 1, all))
+    Yd <- 0 + (apply(X[, delta, drop = FALSE] == 1, 1, all) & apply(X[, rest, drop = FALSE] == 0, 1, all))
     p_dab <- cbind(Yd, X[, c(a, b)], p = p)
     p_dab <- as.data.frame(xtabs(p ~ ., p_dab))
     p_dab
@@ -80,7 +88,7 @@ measures2 <- function(p_dd) {
     q <- p_dd$Freq
     OR <- q[1] * q[4] / (q[2] * q[3])
     Y <- (sqrt(OR) - 1) / (sqrt(OR) + 1)
-    c(Y = Y, OR = OR)
+    c(OR = OR, Y = Y)
 }
 # .............. all the calculations together .............
 `path_calc` <- function(pat, V, p) {
@@ -171,3 +179,45 @@ measures2 <- function(p_dd) {
     X %*% p
 }
 # ..................................
+
+# Two functions for computation of (Yd, Xa, Xb)
+ydelta <- function(pa, V) {
+    v <- length(V)
+    if (v < 3) stop("The number of nodes is less then 3.")
+    X <- data.frame(expand.grid(rep(list(c(0, 1)), v)))
+    colnames(X) <- V
+    a <- pa[1]
+    b <- pa[length(pa)]
+    delta <- setdiff(pa, c(a, b))
+    rest <- setdiff(V, c(a, delta, b))
+
+    Ydelta <- matrix(0, nrow = 2^v, ncol = 2)
+    for (i in 1:2^v) {
+        Ydelta[i, ] <- c(
+            all(X[i, delta] == 1),
+            all(X[i, rest] == 0)
+        )
+    }
+
+    Yd <- matrix(0, nrow = 2^v, ncol = 1)
+    for (i in 1:2^v) {
+        if (Ydelta[i, 1] == 1 & Ydelta[i, 2] == 1) {
+            Yd[i] <- 1
+        } else {
+            Yd[i] <- 0
+        }
+    }
+    data.frame(Yd, Xa = X[, a], Xb = X[, b])
+}
+
+ydelta2 <- function(pa, V, p) {
+    v <- length(V)
+    X <- data.frame(expand.grid(rep(list(c(0, 1)), v)))
+    colnames(X) <- V
+    a <- pa[1]
+    b <- pa[length(pa)]
+    delta <- setdiff(pa, c(a, b))
+    rest <- setdiff(V, c(a, delta, b))
+    Yd <- 0 + (apply(X[, delta, drop = FALSE] == 1, 1, all) & apply(X[, rest, drop = FALSE] == 0, 1, all))
+    cbind(Yd, X[, c(a, b)])
+}
